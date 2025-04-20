@@ -43,4 +43,18 @@ class MatchUsersTest < Minitest::Test
       MatchUsers.new(['email'], 'nonexistent_file.csv')
     end
   end
+
+  def test_match_users_can_process_file
+    matcher = MatchUsers.new(['email'], @temp_file.path)
+    matcher.process_to_file(@output_file)
+    assert File.exist?(@output_file)
+  end
+
+  def test_output_file_has_user_id_column
+    matcher = MatchUsers.new(['email'], @temp_file.path)
+    matcher.process_to_file(@output_file)
+
+    headers = CSV.read(@output_file, headers: true).headers
+    assert_includes headers, 'user_id'
+  end
 end
