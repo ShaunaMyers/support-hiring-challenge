@@ -11,9 +11,9 @@ class MatchUsers
   def process_to_file(output_filename)
     # should we eventually set a default filename that uses timestamp?
     rows = read_csv(@input_filename)
+    user_ids = group_records(rows)
 
-    # Write to output file with empty user_ids for now
-    write_csv(output_filename, rows, {})
+    write_csv(output_filename, rows, user_ids)
   end
 
   private
@@ -42,14 +42,46 @@ class MatchUsers
     rows
   end
 
+  def group_records(rows)
+    record_to_group = {}
+    groups = {}
+    next_group_id = 1
+
+    rows.each_with_index do |row, index|
+      group_id = nil
+
+      if @matching_types.include?('email') && row['email']
+        email_key = row['email'].downcase.strip
+        if groups[:email] && groups[:email][email_key]
+          group_id = groups[:email][email_key]
+        end
+      end
+
+      if group_id.nil?
+        group_id = next_group_id
+        next_group_id += 1
+      end
+
+      record_to_group[index] = group_id
+
+      if @matching_types.include?('email') && row['email']
+        email_key = row['email'].downcase.strip
+        groups[:email] ||= {}
+        groups[:email][email_key] = group_id
+      end
+    end
+
+    record_to_group
+  end
+
   def write_csv(output_filename, rows, user_ids)
     CSV.open(output_filename, 'w') do |csv|
       headers = ['user_id'] + rows.first.keys
       csv << headers
 
-      # Write data rows with placeholder user_ids
       rows.each_with_index do |row, index|
-        csv << [index + 1] + row.values
+        user_id = user_ids[index] || (index + 1)
+        csv << [user_id] + row.values
       end
     end
   end

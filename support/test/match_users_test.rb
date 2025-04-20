@@ -57,4 +57,18 @@ class MatchUsersTest < Minitest::Test
     headers = CSV.read(@output_file, headers: true).headers
     assert_includes headers, 'user_id'
   end
+
+  def test_email_matching_groups_same_emails
+    matcher = MatchUsers.new(['email'], @temp_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+
+    # Find rows with the same email
+    john_row = rows.find { |row| row['first_name'] == 'John' }
+    johnny_row = rows.find { |row| row['first_name'] == 'Johnny' }
+
+    # They should have the same user_id
+    assert_equal john_row['user_id'], johnny_row['user_id']
+  end
 end
