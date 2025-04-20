@@ -142,8 +142,14 @@ class MatchUsers
       headers = ['UserId'] + rows.first.keys
       csv << headers
 
-      rows.each_with_index do |row, index|
+      rows_with_ids = rows.each_with_index.map do |row, index|
         user_id = user_ids[index] || (index + 1)
+        [user_id, row, index]
+      end
+
+      rows_with_ids.sort_by! { |user_id, _, _| user_id }
+
+      rows_with_ids.each do |user_id, row, _|
         csv << [user_id] + row.values
       end
     end
