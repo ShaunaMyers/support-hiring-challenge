@@ -11,7 +11,7 @@ class MatchUsersTest < Minitest::Test
       John,Doe,123-456-7890,john@example.com,12345
       Jane,Smith,987-654-3210,ane@example.com,54321
       Johnny,Doe,555-555-5555,john@example.com,12345
-      Bob,Johnson,(123) 456-7890,bob@example.com,67890
+      Jonathan,Doe,(123) 456-7890,jonathan@example.com,67890
     CSV
     @temp_file.close
 
@@ -80,9 +80,24 @@ class MatchUsersTest < Minitest::Test
 
     # Find rows with the same phone (after normalization)
     john_row = rows.find { |row| row['first_name'] == 'John' }
-    bob_row = rows.find { |row| row['first_name'] == 'Bob' }
+    jonathan_row = rows.find { |row| row['first_name'] == 'Jonathan' }
 
     # They should have the same user_id
-    assert_equal john_row['user_id'], bob_row['user_id']
+    assert_equal john_row['user_id'], jonathan_row['user_id']
+  end
+
+  def test_multiple_matching_types
+    matcher = MatchUsers.new(%w[email phone], @temp_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+
+    # With both matchers, John, Johnny, and Jonathan should be in the same group
+    john_row = rows.find { |row| row['first_name'] == 'John' }
+    johnny_row = rows.find { |row| row['first_name'] == 'Johnny' }
+    jonathan_row = rows.find { |row| row['first_name'] == 'Jonathan' }
+
+    assert_equal john_row['user_id'], johnny_row['user_id']
+    assert_equal john_row['user_id'], jonathan_row['user_id']
   end
 end
