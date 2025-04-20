@@ -71,4 +71,18 @@ class MatchUsersTest < Minitest::Test
     # They should have the same user_id
     assert_equal john_row['user_id'], johnny_row['user_id']
   end
+
+  def test_phone_matching_groups_same_phones
+    matcher = MatchUsers.new(['phone'], @temp_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+
+    # Find rows with the same phone (after normalization)
+    john_row = rows.find { |row| row['first_name'] == 'John' }
+    bob_row = rows.find { |row| row['first_name'] == 'Bob' }
+
+    # They should have the same user_id
+    assert_equal john_row['user_id'], bob_row['user_id']
+  end
 end

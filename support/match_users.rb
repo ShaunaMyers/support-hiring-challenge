@@ -42,6 +42,10 @@ class MatchUsers
     rows
   end
 
+  def normalize_phone(phone)
+    phone.to_s.gsub(/\D/, '')
+  end
+
   def group_records(rows)
     record_to_group = {}
     groups = {}
@@ -57,6 +61,13 @@ class MatchUsers
         end
       end
 
+      if group_id.nil? && @matching_types.include?('phone') && row['phone']
+        phone_key = normalize_phone(row['phone'])
+        if groups[:phone] && groups[:phone][phone_key]
+          group_id = groups[:phone][phone_key]
+        end
+      end
+
       if group_id.nil?
         group_id = next_group_id
         next_group_id += 1
@@ -68,6 +79,12 @@ class MatchUsers
         email_key = row['email'].downcase.strip
         groups[:email] ||= {}
         groups[:email][email_key] = group_id
+      end
+
+      if @matching_types.include?('phone') && row['phone']
+        phone_key = normalize_phone(row['phone'])
+        groups[:phone] ||= {}
+        groups[:phone][phone_key] = group_id
       end
     end
 
