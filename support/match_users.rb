@@ -10,8 +10,13 @@ class MatchUsers
 
   def process_to_file(output_filename)
     rows = read_csv(@input_filename)
-    user_ids = group_records(rows)
+    return if rows.empty?
 
+    headers = rows.first.keys
+    @email_columns = identify_columns(headers, 'email')
+    @phone_columns = identify_columns(headers, 'phone')
+
+    user_ids = group_records(rows)
     write_csv(output_filename, rows, user_ids)
   end
 
@@ -41,8 +46,41 @@ class MatchUsers
     rows
   end
 
+  def identify_columns(headers, type)
+    columns = []
+
+    headers.each do |header|
+      header_lower = header.to_s.downcase
+      if header_lower.include?(type)
+        columns << header
+      end
+    end
+
+    columns
+  end
+
   def normalize_phone(phone)
     phone.to_s.gsub(/\D/, '')
+  end
+
+  def get_emails(row)
+    emails = []
+    @email_columns.each do |col|
+      if row[col]
+        emails << row[col].downcase.strip
+      end
+    end
+    emails
+  end
+
+  def get_phone_numbers(row)
+    phones = []
+    @phone_columns.each do |col|
+      if row[col]
+        phones << normalize_phone(row[col])
+      end
+    end
+    phones
   end
 
   def group_records(rows)
@@ -54,17 +92,23 @@ class MatchUsers
     rows.each_with_index do |row, index|
       group_id = nil
 
-      if @matching_types.include?('email') && row['Email']
-        email_key = row['Email'].downcase.strip
-        if email_to_group[email_key]
-          group_id = email_to_group[email_key]
+      if @matching_types.include?('email')
+        emails = get_emails(row)
+        emails.each do |email|
+          if email_to_group[email]
+            group_id = email_to_group[email]
+            break
+          end
         end
       end
 
-      if group_id.nil? && @matching_types.include?('phone') && row['Phone']
-        phone_key = normalize_phone(row['Phone'])
-        if phone_to_group[phone_key]
-          group_id = phone_to_group[phone_key]
+      if group_id.nil? && @matching_types.include?('phone')
+        phone_numbers = get_phone_numbers(row)
+        phone_numbers.each do |phone|
+          if phone_to_group[phone]
+            group_id = phone_to_group[phone]
+            break
+          end
         end
       end
 
@@ -75,14 +119,18 @@ class MatchUsers
 
       record_to_group[index] = group_id
 
-      if @matching_types.include?('email') && row['Email']
-        email_key = row['Email'].downcase.strip
-        email_to_group[email_key] = group_id
+      if @matching_types.include?('email')
+        emails = get_emails(row)
+        emails.each do |email|
+          email_to_group[email] = group_id
+        end
       end
 
-      if @matching_types.include?('phone') && row['Phone']
-        phone_key = normalize_phone(row['Phone'])
-        phone_to_group[phone_key] = group_id
+      if @matching_types.include?('phone')
+        phone_numbers = get_phone_numbers(row)
+        phone_numbers.each do |phone|
+          phone_to_group[phone] = group_id
+        end
       end
     end
 
@@ -94,8 +142,14 @@ class MatchUsers
       headers = ['UserId'] + rows.first.keys
       csv << headers
 
-      rows.each_with_index do |row, index|
+      rows_with_ids = rows.each_with_index.map do |row, index|
         user_id = user_ids[index] || (index + 1)
+        [user_id, row, index]
+      end
+
+      rows_with_ids.sort_by! { |user_id, _, _| user_id }
+
+      rows_with_ids.each do |user_id, row, _|
         csv << [user_id] + row.values
       end
     end
