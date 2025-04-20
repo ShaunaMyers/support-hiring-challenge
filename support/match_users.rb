@@ -106,5 +106,24 @@ end
 
 # Command-line handling
 if __FILE__ == $PROGRAM_NAME
-  # implement later
+  if ARGV.length < 2
+    puts "Usage: ruby match_users.rb <one_or_more_matching_types> <input_filename.csv>"
+    puts "Example: ruby match_users.rb email phone input.csv"
+    exit 1
+  end
+
+  matching_types = ARGV[0..-2]
+  input_filename = ARGV[-1]
+
+  output_filename = "matched_#{Time.now.strftime('%Y%m%d%H%M%S')}_#{File.basename(input_filename)}"
+
+  begin
+    matcher = MatchUsers.new(matching_types, input_filename)
+    matcher.process_to_file(output_filename)
+
+    puts "Processing complete. Results saved to '#{output_filename}'."
+  rescue => e
+    puts "Error: #{e.message}"
+    exit 1
+  end
 end
