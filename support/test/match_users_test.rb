@@ -37,4 +37,10 @@ class MatchUsersTest < Minitest::Test
       MatchUsers.new(['invalid_type'], @temp_file.path)
     end
   end
+
+  def test_match_users_validates_input_file_exists
+    assert_raises(ArgumentError) do
+      MatchUsers.new(['email'], 'nonexistent_file.csv')
+    end
+  end
 end

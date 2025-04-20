@@ -5,7 +5,7 @@ class MatchUsers
 
   def initialize(matching_types, input_filename)
     @matching_types = validate_matching_types(matching_types)
-    @input_filename = input_filename
+    @input_filename = validate_input_file(input_filename)
   end
 
   private
@@ -17,6 +17,13 @@ class MatchUsers
       end
     end
     types
+  end
+
+  def validate_input_file(filename)
+    unless File.exist?(filename)
+      raise ArgumentError, "Input file '#{filename}' does not exist"
+    end
+    filename
   end
 end
 
