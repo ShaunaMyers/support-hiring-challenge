@@ -1,7 +1,7 @@
 require 'csv'
 
 class MatchUsers
-  VALID_MATCHERS = ['email', 'phone']
+  VALID_MATCHERS = %w[email phone]
 
   def initialize(matching_types, input_filename)
     @matching_types = validate_matching_types(matching_types)
@@ -9,7 +9,6 @@ class MatchUsers
   end
 
   def process_to_file(output_filename)
-    # should we eventually set a default filename that uses timestamp?
     rows = read_csv(@input_filename)
     user_ids = group_records(rows)
 
@@ -48,23 +47,24 @@ class MatchUsers
 
   def group_records(rows)
     record_to_group = {}
-    groups = {}
+    email_to_group = {}
+    phone_to_group = {}
     next_group_id = 1
 
     rows.each_with_index do |row, index|
       group_id = nil
 
-      if @matching_types.include?('email') && row['email']
-        email_key = row['email'].downcase.strip
-        if groups[:email] && groups[:email][email_key]
-          group_id = groups[:email][email_key]
+      if @matching_types.include?('email') && row['Email']
+        email_key = row['Email'].downcase.strip
+        if email_to_group[email_key]
+          group_id = email_to_group[email_key]
         end
       end
 
-      if group_id.nil? && @matching_types.include?('phone') && row['phone']
-        phone_key = normalize_phone(row['phone'])
-        if groups[:phone] && groups[:phone][phone_key]
-          group_id = groups[:phone][phone_key]
+      if group_id.nil? && @matching_types.include?('phone') && row['Phone']
+        phone_key = normalize_phone(row['Phone'])
+        if phone_to_group[phone_key]
+          group_id = phone_to_group[phone_key]
         end
       end
 
@@ -75,16 +75,14 @@ class MatchUsers
 
       record_to_group[index] = group_id
 
-      if @matching_types.include?('email') && row['email']
-        email_key = row['email'].downcase.strip
-        groups[:email] ||= {}
-        groups[:email][email_key] = group_id
+      if @matching_types.include?('email') && row['Email']
+        email_key = row['Email'].downcase.strip
+        email_to_group[email_key] = group_id
       end
 
-      if @matching_types.include?('phone') && row['phone']
-        phone_key = normalize_phone(row['phone'])
-        groups[:phone] ||= {}
-        groups[:phone][phone_key] = group_id
+      if @matching_types.include?('phone') && row['Phone']
+        phone_key = normalize_phone(row['Phone'])
+        phone_to_group[phone_key] = group_id
       end
     end
 
@@ -93,7 +91,7 @@ class MatchUsers
 
   def write_csv(output_filename, rows, user_ids)
     CSV.open(output_filename, 'w') do |csv|
-      headers = ['user_id'] + rows.first.keys
+      headers = ['UserId'] + rows.first.keys
       csv << headers
 
       rows.each_with_index do |row, index|

@@ -7,7 +7,7 @@ class MatchUsersTest < Minitest::Test
   def setup
     @temp_file = Tempfile.new(%w[test .csv])
     @temp_file.write(<<~CSV)
-      first_name,last_name,phone,email,zip
+      FirstName,LastName,Phone,Email,Zip
       John,Doe,123-456-7890,john@example.com,12345
       Jane,Smith,987-654-3210,ane@example.com,54321
       Johnny,Doe,555-555-5555,john@example.com,12345
@@ -55,7 +55,7 @@ class MatchUsersTest < Minitest::Test
     matcher.process_to_file(@output_file)
 
     headers = CSV.read(@output_file, headers: true).headers
-    assert_includes headers, 'user_id'
+    assert_includes headers, 'UserId'
   end
 
   def test_email_matching_groups_same_emails
@@ -65,11 +65,11 @@ class MatchUsersTest < Minitest::Test
     rows = CSV.read(@output_file, headers: true)
 
     # Find rows with the same email
-    john_row = rows.find { |row| row['first_name'] == 'John' }
-    johnny_row = rows.find { |row| row['first_name'] == 'Johnny' }
+    john_row = rows.find { |row| row['FirstName'] == 'John' }
+    johnny_row = rows.find { |row| row['FirstName'] == 'Johnny' }
 
     # They should have the same user_id
-    assert_equal john_row['user_id'], johnny_row['user_id']
+    assert_equal john_row['UserId'], johnny_row['UserId']
   end
 
   def test_phone_matching_groups_same_phones
@@ -79,11 +79,11 @@ class MatchUsersTest < Minitest::Test
     rows = CSV.read(@output_file, headers: true)
 
     # Find rows with the same phone (after normalization)
-    john_row = rows.find { |row| row['first_name'] == 'John' }
-    jonathan_row = rows.find { |row| row['first_name'] == 'Jonathan' }
+    john_row = rows.find { |row| row['FirstName'] == 'John' }
+    jonathan_row = rows.find { |row| row['FirstName'] == 'Jonathan' }
 
     # They should have the same user_id
-    assert_equal john_row['user_id'], jonathan_row['user_id']
+    assert_equal john_row['UserId'], jonathan_row['UserId']
   end
 
   def test_multiple_matching_types
@@ -93,11 +93,11 @@ class MatchUsersTest < Minitest::Test
     rows = CSV.read(@output_file, headers: true)
 
     # With both matchers, John, Johnny, and Jonathan should be in the same group
-    john_row = rows.find { |row| row['first_name'] == 'John' }
-    johnny_row = rows.find { |row| row['first_name'] == 'Johnny' }
-    jonathan_row = rows.find { |row| row['first_name'] == 'Jonathan' }
+    john_row = rows.find { |row| row['FirstName'] == 'John' }
+    johnny_row = rows.find { |row| row['FirstName'] == 'Johnny' }
+    jonathan_row = rows.find { |row| row['FirstName'] == 'Jonathan' }
 
-    assert_equal john_row['user_id'], johnny_row['user_id']
-    assert_equal john_row['user_id'], jonathan_row['user_id']
+    assert_equal john_row['UserId'], johnny_row['UserId']
+    assert_equal john_row['UserId'], jonathan_row['UserId']
   end
 end
