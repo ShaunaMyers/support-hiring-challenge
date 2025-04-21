@@ -100,4 +100,118 @@ class MatchUsersTest < Minitest::Test
     assert_equal john_row['UserId'], johnny_row['UserId']
     assert_equal john_row['UserId'], jonathan_row['UserId']
   end
+
+  def test_handles_empty_csv_file
+    empty_file = Tempfile.new(%w[empty .csv])
+    empty_file.write("FirstName,LastName,Phone,Email,Zip\n")
+    empty_file.close
+
+    matcher = MatchUsers.new(['email'], empty_file.path)
+    # The method should return early without creating an output file
+    matcher.process_to_file(@output_file)
+
+    # Assert that the output file doesn't exist, as expected
+    refute File.exist?(@output_file)
+
+    empty_file.unlink
+  end
+
+  def test_handles_csv_with_no_matching_columns
+    no_match_file = Tempfile.new(%w[no_match .csv])
+    no_match_file.write(<<~CSV)
+    FirstName,LastName,Address,Zip
+    John,Doe,123 Main St,12345
+    Jane,Smith,456 Oak Ave,54321
+  CSV
+    no_match_file.close
+
+    matcher = MatchUsers.new(['email'], no_match_file.path)
+    matcher.process_to_file(@output_file)
+
+    assert File.exist?(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+    user_ids = rows.map { |row| row['UserId'] }.uniq
+    assert_equal rows.count, user_ids.count
+
+    no_match_file.unlink
+  end
+
+  def test_phone_normalization
+    phone_file = Tempfile.new(%w[phone .csv])
+    phone_file.write(<<~CSV)
+    FirstName,LastName,Phone
+    John,Doe,123-456-7890
+    Jane,Smith,(123) 456-7890
+    Bob,Johnson,1234567890
+    Alice,Brown,1-123-456-7890
+  CSV
+    phone_file.close
+
+    matcher = MatchUsers.new(['phone'], phone_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+    user_ids = rows.map { |row| row['UserId'] }.uniq
+    assert_equal 1, user_ids.count
+
+    phone_file.unlink
+  end
+
+  def test_case_insensitive_email_matching
+    email_file = Tempfile.new(%w[email .csv])
+    email_file.write(<<~CSV)
+    FirstName,LastName,Email
+    John,Doe,John@Example.com
+    Jane,Smith,john@example.com
+  CSV
+    email_file.close
+
+    matcher = MatchUsers.new(['email'], email_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+    user_ids = rows.map { |row| row['UserId'] }.uniq
+    assert_equal 1, user_ids.count
+
+    email_file.unlink
+  end
+
+  def test_identifies_columns_with_different_names
+    column_file = Tempfile.new(%w[columns .csv])
+    column_file.write(<<~CSV)
+    FirstName,LastName,WorkPhone,HomePhone,PersonalEmail,WorkEmail
+    John,Doe,123-456-7890,987-654-3210,john@example.com,john@work.com
+  CSV
+    column_file.close
+
+    matcher = MatchUsers.new(['phone', 'email'], column_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+    assert_equal 1, rows.count
+
+    column_file.unlink
+  end
+
+  def test_handles_empty_values
+    empty_values_file = Tempfile.new(%w[empty_values .csv])
+    empty_values_file.write(<<~CSV)
+    FirstName,LastName,Phone,Email
+    John,Doe,,john@example.com
+    Jane,Smith,123-456-7890,
+    Bob,Johnson,,
+  CSV
+    empty_values_file.close
+
+    matcher = MatchUsers.new(['phone', 'email'], empty_values_file.path)
+    matcher.process_to_file(@output_file)
+
+    rows = CSV.read(@output_file, headers: true)
+    # John and Jane should be in different groups, Bob in a third
+    user_ids = rows.map { |row| row['UserId'] }.uniq
+    assert_equal 3, user_ids.count
+
+    empty_values_file.unlink
+  end
 end
