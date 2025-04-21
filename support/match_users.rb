@@ -60,7 +60,15 @@ class MatchUsers
   end
 
   def normalize_phone(phone)
-    phone.to_s.gsub(/\D/, '')
+    # Remove all non-digit characters
+    digits = phone.to_s.gsub(/\D/, '')
+
+    # Handle US numbers with country code (leading 1)
+    if digits.length == 11 && digits.start_with?('1')
+      digits = digits[1..-1]
+    end
+
+    digits
   end
 
   def get_emails(row)
